@@ -1,19 +1,19 @@
 package main
 
 import (
-	"fmt" 
-	"strings"
 	"bufio"
+	"fmt"
 	"os"
-	"net/http"
-	"io"
-	"log"
-	"encoding/json"
+	"strings"
+	"time"
+
+	"pokedex/internal/pokeapi"
 )
 
 type config struct {
-    next     *string
-    previous *string
+	next       *string
+	previous   *string
+	pokeClient pokeapi.Client
 }
 
 type cliCommand struct {
@@ -22,58 +22,62 @@ type cliCommand struct {
 	callback    func(*config) error
 }
 
-
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
-	cliCommands := map[string]cliCommand{
-    "exit": {
-        name:        "exit",
-        description: "Exit the Pokedex",
-        callback:    commandExit,
-    },
-		"help": {
-			  name:        "help",
-		    description: "Displays a help message",
-			  callback:    commandHelp,
-		}, 
-		"map": {
-			  name:        "map",
-        description: "Print next map of the area",
-        callback:    commandMap,
-		},
-		"mapb": {
-		    name:        "mapb",
-			  description: "Print previous map of the area",
-			  callback:    commandMapB,
-		},
+	cfg := &config{
+		pokeClient: pokeapi.NewClient(5 * time.Second),
 	}
 
-	cfg := &config{}
+	cliCommands := map[string]cliCommand{
+		"exit": {
+			name:        "exit",
+			description: "Exit the Pokedex",
+			callback:    commandExit,
+		},
+		"help": {
+			name:        "help",
+			description: "Displays a help message",
+			callback:    commandHelp,
+		},
+		"map": {
+			name:        "map",
+			description: "Print next map of the area",
+			callback:    commandMap,
+		},
+		"mapb": {
+			name:        "mapb",
+			description: "Print previous map of the area",
+			callback:    commandMapB,
+		},
+	}
 
 	for {
 		fmt.Printf("Pokedex > ")
 
 		if !scanner.Scan() {
-			return // or break, if input is closed
-    }
+			return
+		}
 
-    input := scanner.Text()
-    clean := cleanInput(input)
+		input := scanner.Text()
+		clean := cleanInput(input)
+		if len(clean) == 0 {
+			continue
+		}
 		command := clean[0]
-		
+
 		if cli, ok := cliCommands[command]; ok {
-			cli.callback(cfg)
+			if err := cli.callback(cfg); err != nil {
+				fmt.Println("Error:", err)
+			}
 		} else {
 			fmt.Println("Unknown command")
 		}
 	}
-
-	return
 }
 
 func commandExit(cfg *config) error {
-	fmt.Println("Closing the Pokedex... Goodbye!")	
+	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
@@ -85,121 +89,40 @@ func commandHelp(cfg *config) error {
 	fmt.Println("Mapb: Print the previous map page")
 	fmt.Println("help: Displays a help message")
 	fmt.Println("exit: Exit the Pokedex")
-	/* for _, message := range cliCommands {
-		fmt.Println(message.description)
-	} */
 	return nil
 }
 
-type locationResult struct {
-    Count    int       `json:"count"`
-    Next     *string   `json:"next"`
-    Previous *string   `json:"previous"`
-    Results  []struct {
-        Name string `json:"name"`
-        URL  string `json:"url"`
-    } `json:"results"`
-}
-
 func commandMap(cfg *config) error {
-	fmt.Println("Map")
-	getURL := "https://pokeapi.co/api/v2/location-area"
-	if cfg.next != nil && *cfg.next != "" {
-			getURL = *cfg.next
-	}
-
-	res, err := http.Get(getURL)
-
+	locations, err := cfg.pokeClient.FetchLocations(cfg.next)
 	if err != nil {
-		log.Fatal(err)
-	}
-	locations := locationResult{}
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode > 299 {
-		log.Fatalf("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	unmarshalErr := json.Unmarshal(body, &locations)
-	if unmarshalErr != nil {
-		fmt.Println(unmarshalErr)
+		return err
 	}
 
 	cfg.next = locations.Next
 	cfg.previous = locations.Previous
 
-	// DEBUG PRINT NEXT
-	if cfg.next == nil {
-		fmt.Println("No next, you're on the last page")
-	} else {
-		fmt.Println(*cfg.next)
-	}
-	// DEBUG PRINT PREVIOUS
-	if cfg.previous == nil {
-		fmt.Println("No previous, you're on the first page")
-	} else {
-		fmt.Println(*cfg.previous)
-	}
-
 	for _, loc := range locations.Results {
-    fmt.Println(loc.Name)
+		fmt.Println(loc.Name)
 	}
 	return nil
 }
 
 func commandMapB(cfg *config) error {
-	fmt.Println("MapB")
 	if cfg.previous == nil {
-    fmt.Println("you're on the first page")
-    return nil
-	}
-	getURL := ""
-	if cfg.previous != nil && *cfg.previous != "" {
-			getURL = *cfg.previous
-	} else {
-		fmt.Println("Previous url could not be found")
+		fmt.Println("you're on the first page")
+		return nil
 	}
 
-	res, err := http.Get(getURL)
-
+	locations, err := cfg.pokeClient.FetchLocations(cfg.previous)
 	if err != nil {
-		log.Fatal(err)
-	}
-	locations := locationResult{}
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode > 299 {
-		log.Fatalf("Response failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
-	}
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	unmarshalErr := json.Unmarshal(body, &locations)
-	if unmarshalErr != nil {
-		fmt.Println(unmarshalErr)
+		return err
 	}
 
 	cfg.next = locations.Next
 	cfg.previous = locations.Previous
-	// DEBUG PRINT NEXT
-	if cfg.next == nil {
-		fmt.Println("No next, you're on the last page")
-	} else {
-		fmt.Println(*cfg.next)
-	}
-	// DEBUG PRINT PREVIOUS
-	if cfg.previous == nil {
-		fmt.Println("No previous, you're on the first page")
-	} else {
-		fmt.Println(*cfg.previous)
-	}
 
 	for _, loc := range locations.Results {
-    fmt.Println(loc.Name)
+		fmt.Println(loc.Name)
 	}
 
 	return nil
