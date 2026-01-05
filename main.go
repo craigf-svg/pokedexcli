@@ -13,7 +13,7 @@ import (
 type config struct {
 	next       *string
 	previous   *string
-	pokeClient pokeapi.Client
+	pokeClient *pokeapi.Client
 }
 
 type cliCommand struct {
