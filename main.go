@@ -84,7 +84,7 @@ func commandExit(cfg *config) error {
 
 func commandHelp(cfg *config) error {
 	fmt.Println("Welcome to the Pokedex!")
-	fmt.Println("Usage:\n")
+	fmt.Println("Usage:")
 	fmt.Println("Map: Print the current map page")
 	fmt.Println("Mapb: Print the previous map page")
 	fmt.Println("help: Displays a help message")
