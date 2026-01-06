@@ -19,7 +19,7 @@ type config struct {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, string) error
 }
 
 func main() {
@@ -49,6 +49,11 @@ func main() {
 			name:        "mapb",
 			description: "Print previous map of the area",
 			callback:    commandMapB,
+		}, 
+		"explore": {
+			name:         "explore",
+			description:  "Explore a specific location",
+			callback:     commandExplore,
 		},
 	}
 
@@ -61,13 +66,19 @@ func main() {
 
 		input := scanner.Text()
 		clean := cleanInput(input)
+		arg := ""	
+
 		if len(clean) == 0 {
 			continue
 		}
-		command := clean[0]
 
+		command := clean[0]
+		
+		if len(clean) == 2 {
+			arg = clean[1]
+		}
 		if cli, ok := cliCommands[command]; ok {
-			if err := cli.callback(cfg); err != nil {
+			if err := cli.callback(cfg, arg); err != nil {
 				fmt.Println("Error:", err)
 			}
 		} else {
@@ -76,23 +87,36 @@ func main() {
 	}
 }
 
-func commandExit(cfg *config) error {
+func commandExit(cfg *config, arg string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(cfg *config) error {
+func commandHelp(cfg *config, arg string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("Map: Print the current map page")
 	fmt.Println("Mapb: Print the previous map page")
+	fmt.Println("Explore: Explore a specific area")
 	fmt.Println("help: Displays a help message")
 	fmt.Println("exit: Exit the Pokedex")
 	return nil
 }
 
-func commandMap(cfg *config) error {
+func commandExplore(cfg *config, arg string) error {
+	location, err := cfg.pokeClient.ExploreLocation(arg)
+	if err !=nil {
+		return err
+	}
+
+	for _, encounter := range location.PokemonEncounters {
+		fmt.Printf("- %s\n", encounter.Pokemon.Name)
+	}
+	return nil
+}
+
+func commandMap(cfg *config, arg string) error {
 	locations, err := cfg.pokeClient.FetchLocations(cfg.next)
 	if err != nil {
 		return err
@@ -107,7 +131,7 @@ func commandMap(cfg *config) error {
 	return nil
 }
 
-func commandMapB(cfg *config) error {
+func commandMapB(cfg *config, arg string) error {
 	if cfg.previous == nil {
 		fmt.Println("you're on the first page")
 		return nil
