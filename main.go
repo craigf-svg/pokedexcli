@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"math/rand"
 	"time"
 
 	"pokedex/internal/pokeapi"
@@ -14,6 +15,7 @@ type config struct {
 	next       *string
 	previous   *string
 	pokeClient *pokeapi.Client
+	pokedex	   map[string]pokeapi.PokemonResult
 }
 
 type cliCommand struct {
@@ -27,6 +29,7 @@ func main() {
 
 	cfg := &config{
 		pokeClient: pokeapi.NewClient(5 * time.Second),
+		pokedex: make(map[string]pokeapi.PokemonResult),
 	}
 
 	cliCommands := map[string]cliCommand{
@@ -54,6 +57,11 @@ func main() {
 			name:         "explore",
 			description:  "Explore a specific location",
 			callback:     commandExplore,
+		},
+		"catch": {
+			name:         "catch",
+			description:  "Catch a pokemon",
+			callback:     commandCatch,
 		},
 	}
 
@@ -99,8 +107,44 @@ func commandHelp(cfg *config, arg string) error {
 	fmt.Println("Map: Print the current map page")
 	fmt.Println("Mapb: Print the previous map page")
 	fmt.Println("Explore: Explore a specific area")
+	fmt.Println("Catch: Catch a specific pokemon")
 	fmt.Println("help: Displays a help message")
 	fmt.Println("exit: Exit the Pokedex")
+	return nil
+}
+
+func commandCatch(cfg *config, arg string) error {
+	fmt.Printf("catch %s\n", arg)	
+	pokemon, err := cfg.pokeClient.CatchPokemon(arg)
+
+	if err !=nil {
+		return err
+	}
+
+	fmt.Printf("Base Experience: %v\n", pokemon.BaseExperience)
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemon.Name)
+
+	catchChance := 100 - (pokemon.BaseExperience / 3)
+
+	if catchChance < 5 {
+		catchChance = 5
+	}
+	if catchChance > 95 {
+		catchChance = 95
+	}
+
+	if rand.Intn(100) < catchChance {
+    fmt.Printf("%s was caught!\n", pokemon.Name)
+		cfg.pokedex[pokemon.Name] = pokemon
+	} else {
+		fmt.Printf("%s escaped!\n", pokemon.Name)
+	}
+	/*
+	fmt.Printf("Pokedex - %d Pokemon\n", len(cfg.pokedex))
+	for _, poke := range cfg.pokedex {
+		fmt.Printf("%s\n", poke.Name)
+	}
+	*/
 	return nil
 }
 
