@@ -1,7 +1,6 @@
 package pokecache
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -15,7 +14,7 @@ type cacheEntry struct {
 }
 
 func NewCache(interval time.Duration) *Cache {
-	fmt.Println("NewCache()")
+	// fmt.Println("Initialize New Cache")
 	c := Cache{
 		cache: make(map[string]cacheEntry),
 	}
@@ -32,7 +31,7 @@ func (c *Cache) ReapLoop(interval time.Duration) {
 			for key, entry := range c.cache {
 				age := time.Since(entry.createdAt)
 				if age > interval { 
-					fmt.Println("found one that should be reaped")
+					// fmt.Println("found one that should be reaped")
 					delete(c.cache, key)
 				}
 			}
@@ -41,13 +40,13 @@ func (c *Cache) ReapLoop(interval time.Duration) {
 }
 
 func (c *Cache) Get(url string) ([]byte, bool) {
-	fmt.Print("Get()")
+	// fmt.Print("Get()")
 	entry, ok := c.cache[url]
 	if ok {
-		fmt.Println("cache hit")
+		// fmt.Println("Cache key found")
 		return entry.val, true
 	} 
-	fmt.Println("cache miss")
+	// fmt.Println("Cache miss")
 	return nil, false
 }
 
@@ -57,7 +56,7 @@ func (c *Cache) Add(url string, body []byte) {
 		val: body,
 	}
 
-	fmt.Println("Added due to cache miss")
+	// fmt.Println("Key added to cache")
 }
 
 func pokecache() {

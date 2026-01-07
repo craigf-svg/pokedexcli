@@ -162,14 +162,14 @@ func commandInspect(cfg *config, arg string) error {
 }
 
 func commandCatch(cfg *config, arg string) error {
-	fmt.Printf("catch %s\n", arg)	
+	// fmt.Printf("catch %s\n", arg)	
 	pokemon, err := cfg.pokeClient.CatchPokemon(arg)
 
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Base Experience: %v\n", pokemon.BaseExperience)
+	// fmt.Printf("Base Experience: %v\n", pokemon.BaseExperience)
 	fmt.Printf("Throwing a Pokeball at %s...\n", pokemon.Name)
 
 	catchChance := 100 - (pokemon.BaseExperience / 3)
@@ -220,7 +220,7 @@ func commandMap(cfg *config, arg string) error {
 
 func commandMapB(cfg *config, arg string) error {
 	if cfg.previous == nil {
-		fmt.Println("you're on the first page")
+		fmt.Println("You're on the first page")
 		return nil
 	}
 

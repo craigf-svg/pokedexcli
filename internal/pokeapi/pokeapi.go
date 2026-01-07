@@ -379,7 +379,7 @@ func (c *Client) CatchPokemon(pokemon string) (PokemonResult, error) {
 			return PokemonResult{}, nil 
 	}
 	getURL := baseURL + "/pokemon/" + pokemon
-	fmt.Println(getURL)
+	// fmt.Println(getURL)
 
 	resp, err := c.httpClient.Get(getURL)
 	if err != nil {
@@ -401,7 +401,7 @@ func (c *Client) ExploreLocation(locationAreaName string) (ExploreResult, error)
 		return ExploreResult{}, nil 
 	}
 	getURL := baseURL + "/location-area/" + locationAreaName
-	fmt.Println(getURL)
+	// fmt.Println(getURL)
 
 	if data, ok := c.cache.Get(getURL); ok {
 		return decodeExploreResult(data)
@@ -429,7 +429,7 @@ func (c *Client) FetchLocations(url *string) (LocationResult, error) {
 		getURL = *url
 	}
 
-	fmt.Println("Get key:", getURL)
+	// fmt.Println("Get key:", getURL)
 
 	if data, ok := c.cache.Get(getURL); ok {
 			return decodeLocations(data)
